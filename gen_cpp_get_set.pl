@@ -22,6 +22,7 @@ $cname = shift or $cname = 'className';
 
 open( INFO, "$insrc" ) or die "Can't read from $insrc\n";
 my $type; my $var1, my $var; # how else to uppercase just the first letter:)?
+my $var_;
 
 while( <INFO> ){
 	s#//.+$##;	# get rid of line comments
@@ -29,13 +30,16 @@ while( <INFO> ){
 	if( /^\h*(.+?)(\w)(\w*)(\[[^\]]*\])?(?:\{[^}]*\}\h*|\h*=.*)?;$/ ){
 		$type = $1;
 		$var1 = $2;
-		$var = uc($2) . $3;
+		$var = uc($2) . $3; $var_ = $2.$3;
 		$var =~ s/_$//; # since that's a standard convention : varName_
 		print "void $var( $type $var ); // declare setter\n";
 		print "$type $var(); // declare getter\n";
 		
-		print "void $cname"."::$var( $type $var ){ // setter\n}\n";
-		print "$type $cname"."::$var(){  // getter\n}\n";
+		print "void $cname"."::$var( $type $var ){ // setter\n";
+		print "\t$var_ = $var; // add invariant rules!\n}\n";
+		
+		print "$type $cname"."::$var(){  // getter\n";
+		print "\treturn $var_;\n}\n";
 		
 	}
 }
