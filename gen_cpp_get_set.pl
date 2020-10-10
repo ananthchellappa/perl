@@ -30,6 +30,7 @@ while( <INFO> ){
 		$type = $1;
 		$var1 = $2;
 		$var = uc($2) . $3;
+		$var =~ s/_$//; # since that's a standard convention : varName_
 		print "void $var( $type $var ); // declare setter\n";
 		print "$type $var(); // declare getter\n";
 		
