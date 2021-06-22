@@ -118,7 +118,7 @@ while( $file = <INFO>){
 	
     unless ($grepout eq ''){
 		print UNDERLINE, "\n$file\n", RESET;
-		print "\n$grepout";
+		print "\n$grepout" unless length($grepout) > 2000;
     }
 }
 
