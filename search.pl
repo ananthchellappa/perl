@@ -18,6 +18,7 @@ my $word;	# for iterating through regex match items
 my $type_regex = ''; my $N_after = 0; my $N_before = 0; my $count; my $grepout; my $case = '(?i)';
 my $state = 'before';	# used by the context-string-builder state-machine. 'before', 'matched', 'after'
 my @before = ();
+my $home = `echo \$HOME`; chomp($home);
 
 $file = shift or die "Arg1 must be filename (which contains list of full pathnames)\n";
 die "Can't find the file specified\n" unless -e $file;
@@ -55,6 +56,7 @@ open( INFO, $file );
 while( $file = <INFO>){
     next unless $file =~ /\S/;
 	$grepout = '';
+	$file =~ s/~/$home/;
 	if( $type_regex ne '' ){
 		next unless $file =~ /$type_regex/;
 	}
