@@ -25,7 +25,7 @@ if( $diswid < 2000 ){
 	system( "wmctrl -r :ACTIVE: -b toggle,maximized_vert;wmctrl -r :ACTIVE: -b toggle,maximized_horz" );
 	exit(0);
 }
-$wid = `xdotool getactivewindow`; chomp($Wid);
+$wid = `xdotool getactivewindow`; chomp($wid);
 
 $sys_cmd = "xwininfo -id $wid " . q{ | perl -n -e 'print if s/^.+?left [XY]:\s+(\d+)\s*\n/$1 / || s/(Height:|Width:)\s*(\d+)\s*\n/$2/;'};
 $_ = `$sys_cmd`;
@@ -49,8 +49,8 @@ if( $cmd eq 'toggle' ){
 			$y = 0;
 			$W = $diswid >> 2;
 			$H = $dishei >> 1;
-			system("wmctrl -r :ACTIVE: -e 0,$x,$y,$w,$H");
-			system("echo $wid,$date,$x,$y,$w,$H >> ~/.wmdb");
+			system("wmctrl -r :ACTIVE: -e 0,$x,$y,$W,$H");
+			system("echo $wid,$date,$x,$y,$W,$H >> ~/.wmdb");
 		}
 	} else {
 	# maximize
@@ -60,7 +60,7 @@ if( $cmd eq 'toggle' ){
 			system("wmctrl -r :ACTIVE: -e 0,0,0,$swid,$dishei");
 		}
 		system("perl -ni -e 'print unless /^$wid,/;' ~/.wmdb");
-		system("echo $wid,$date,$x,$y,$w,$H >> ~/.wmdb");
+		system("echo $wid,$date,$x,$y,$W,$H >> ~/.wmdb");
 	}
 }
 
