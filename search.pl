@@ -30,8 +30,10 @@ my $option_descriptions = [
     { names => [qw(-o -order)], key => 'ordered_word_portions', is_multi => 1, help => 'Only match lines that has this word-portions in exact same order' },
 
     { names => [qw(-h -help --help)], key => 'help', is_bool => 1, help => 'Show this message' },
+    { names => [qw(-d -dont)], key => 'dont_suppress', is_bool => 1, help => "Don't suppress large output" },
 
 ];
+# AC added -dont
 
 sub get_options {
     my (@argv) = @_;
@@ -58,6 +60,7 @@ sub get_options {
         ordered_word_portions => [],
 
         help => 0,
+	dont_suppress => 0,
     };
 
     my %option_descriptions_hash;
@@ -356,7 +359,7 @@ sub main {
 
         if ($output ne '') {
             print UNDERLINE, "\n$file_name\n", RESET;
-			if (length($output) <= 2000 || $output =~ /\h(?:the|and)\h/ ) {
+			if ($options->{dont_suppress} || length($output) <= 2000 || $output =~ /\h(?:the|and)\h/ ) { #AC
 				print "\n$output";
 			} else {
 				print "\n" . colored('Skipping the output, because it is too big.', 'yellow') . "\n";
