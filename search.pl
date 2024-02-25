@@ -1,20 +1,23 @@
 #!/usr/bin/perl
 
-# work of Ivan Bessarabov
+# work of Ivan Bessarabov and chatGPT
 # do search.pl -help to list options
 # put something like
-# function search() { ~/perl/search.pl -l ~/logs/textfiles.txt $@ ; }
+# function search() { ~/perl/search.pl -D ~/logs $@ ; }
 # to be able to search your logs with $ > search words to search for
 
 use strict;
 use warnings;
 use feature qw(say);
+use File::Find;
 
 use Term::ANSIColor qw(:constants colored);
 
 my $option_descriptions = [
 
     { names => [qw(-f -file)], key => 'files', is_multi => 1, help => 'File to search for matches' },
+    { names => [qw(-D -dir)], key => 'dirs', is_multi => 1, help => 'Directory (but not subdirs) to be used as source of TEXT files' },
+    { names => [qw(-T -tree)], key => 'trees', is_multi => 1, help => 'Directory from which even subdirectories will be searched'},
     { names => [qw(-l -list)], key => 'list_files', is_multi => 1, help => 'File with file names to search' },
     { names => [qw(-t -type)], key => 'types', is_multi => 1, help => 'Only files with this extension will be searched' },
 
@@ -41,6 +44,8 @@ sub get_options {
     my $options = {
         list_files => [],
         files => [],
+        trees => [],
+        dirs => [],
 
         # file extensions
         types => [],
@@ -146,7 +151,7 @@ sub get_files {
 
     foreach my $f (@list_files) {
 
-        check_is_valid_file($f);
+        next unless check_is_valid_file($f);
 
         open(my $fh, "<", $f) or die "Can't open < $f $!";
         while (my $line = <$fh>) {
@@ -160,14 +165,14 @@ sub get_files {
                 $line =~ s/^~(.*)/$ENV{HOME}$1/;
             }
 
-            check_is_valid_file($line);
+            next unless check_is_valid_file($line);
 
             push @all_files, $line;
         }
     }
 
     foreach my $f (@files) {
-        check_is_valid_file($f);
+        next unless check_is_valid_file($f);
         push @all_files, $f;
     }
 
@@ -292,13 +297,45 @@ sub check_is_valid_file {
     my ($file_name) = @_;
 
     if (!-e $file_name) {
-        show_error_and_exit("File $file_name does not exist");
+        print("WARNING: File $file_name does not exist");
     }
 
     if (-d $file_name) {
-        show_error_and_exit("$file_name is a directory");
+        print("WARNING: $file_name is a directory");
     }
+    return -f $file_name && -T $file_name; # AC hack
 }
+
+sub get_dirs {
+    my ($recursive, %args) = @_;
+
+    my @dirs = @{$args{dirs}};
+    my @files = @{$args{files}};
+
+    foreach my $dir (@dirs) {
+        if ($recursive) {
+            # Process directory and all subdirectories
+            find(sub {
+                return unless -f $_ && -T $_;
+                push @files, $File::Find::name;
+            }, $dir);
+        } else {
+            # Process only the specified directory
+            opendir(my $dh, $dir) or die "Cannot open directory $dir: $!";
+            while (my $file = readdir($dh)) {
+                next if $file eq '.' || $file eq '..';
+                my $full_path = "$dir/$file";
+                next unless -f $full_path && -T $full_path;
+                push @files, $full_path;
+            }
+            closedir($dh);
+        }
+    }
+
+    return @files;
+}
+
+
 
 sub main {
 
@@ -314,6 +351,9 @@ sub main {
         files => $options->{files},
         types => $options->{types},
     );
+
+    @files = get_dirs( 0, dirs => $options->{dirs}, files => \@files );
+    @files = get_dirs( 1, dirs => $options->{trees}, files => \@files );
 
     if (@files == 0) {
         show_error_and_exit("No files specified. Use `-file FILE_NAME` or `-list LIST_FILE_NAME`");
