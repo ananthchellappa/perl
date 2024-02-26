@@ -311,6 +311,7 @@ sub get_dirs {
 
     my @dirs = @{$args{dirs}};
     my @files = @{$args{files}};
+	my %types = map { '.' . $_ => 1 } @{delete $args{types}};
 
     foreach my $dir (@dirs) {
         if ($recursive) {
@@ -330,6 +331,18 @@ sub get_dirs {
             }
             closedir($dh);
         }
+    }
+    if (%types) {
+        my @filtered_files;
+        foreach my $f (@files) {
+            foreach my $extension (keys %types) {
+                if ($extension eq substr($f, -length($extension))) {
+                    push @filtered_files, $f;
+                }
+            }
+        }
+
+        return @filtered_files;
     }
 
     return @files;
@@ -352,8 +365,8 @@ sub main {
         types => $options->{types},
     );
 
-    @files = get_dirs( 0, dirs => $options->{dirs}, files => \@files );
-    @files = get_dirs( 1, dirs => $options->{trees}, files => \@files );
+    @files = get_dirs( 0, dirs => $options->{dirs}, files => \@files, types => $options->{types} );
+    @files = get_dirs( 1, dirs => $options->{trees}, files => \@files, types => $options->{types} );
 
     if (@files == 0) {
         show_error_and_exit("No files specified. Use `-file FILE_NAME` or `-list LIST_FILE_NAME`");
