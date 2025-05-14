@@ -8,6 +8,7 @@
 
 use strict;
 use warnings;
+use JSON::PP;
 use feature qw(say);
 use File::Find;
 
@@ -350,6 +351,7 @@ sub get_dirs {
 
 
 
+
 sub main {
 
     my $options = get_options(@_);
@@ -378,12 +380,38 @@ sub main {
 
         my @lines_before;
         my $lines_after_count;
-
         my $output = '';
+        my @lines;
 
-        open(my $fh, "<", $file_name) or die "Can't open < $file_name $!";
-        while (my $line = <$fh>) {
-			next unless ($options->{dont_suppress} || length($line) <= 2000 || $line =~ /\h(?:the|and)\h/ );
+        if ($file_name =~ /\.ipynb$/) {
+            open(my $fh, "<", $file_name) or die "Can't open < $file_name $!";
+            local $/ = undef;
+            my $raw = <$fh>;
+            close $fh;
+
+            my $line_count = ($raw =~ tr/\n//) + 1;
+            if ($line_count <= 2) {
+                eval {
+                    my $json = JSON::PP->new->pretty->canonical;
+                    my $parsed = $json->decode($raw);
+                    my $pretty = $json->encode($parsed);
+                    @lines = split /\n/, $pretty;
+                };
+                if ($@) {
+                    warn "Failed to parse minified JSON from $file_name: $@";
+                    @lines = split /\n/, $raw;
+                }
+            } else {
+                @lines = split /\n/, $raw;
+            }
+        } else {
+            open(my $fh, "<", $file_name) or die "Can't open < $file_name $!";
+            @lines = <$fh>;
+            close $fh;
+        }
+
+        foreach my $line (@lines) {
+            next unless ($options->{dont_suppress} || length($line) <= 2000 || $line =~ /\h(?:the|and)\h/ );
             chomp($line);
             my ($is_line_needed, $formatted_line) = is_line_needed($line, $rules);
 
@@ -391,17 +419,13 @@ sub main {
                 foreach my $l (@lines_before) {
                     $output .= $l . "\n";
                 }
-
                 $output .= $formatted_line . "\n";
-
                 @lines_before = ();
                 $lines_after_count = 0;
             } else {
                 if ($options->{before} > 0) {
                     push @lines_before, $line;
-                    if (@lines_before > $options->{before}) {
-                        shift @lines_before;
-                    }
+                    shift @lines_before if @lines_before > $options->{before};
                 }
                 $lines_after_count++ if defined $lines_after_count;
             }
@@ -413,17 +437,17 @@ sub main {
 
         if ($output ne '') {
             print UNDERLINE, "\n$file_name\n", RESET;
-			if ($options->{dont_suppress} || length($output) <= 2000 || $output =~ /\h(?:the|and)\h/ ) {
-				print "\n$output";
-			} else {
-				print "\n" . colored('Skipping the output, because it is too big.', 'yellow') . "\n";
-			}
+            if ($options->{dont_suppress} || length($output) <= 2000 || $output =~ /\h(?:the|and)\h/ ) {
+                print "\n$output";
+            } else {
+                print "\n" . colored('Skipping the output, because it is too big.', 'yellow') . "\n";
+            }
         }
-
     }
 
     print "\nDONE!\n";
 }
+
 
 main(@ARGV) if not caller();
 1;
