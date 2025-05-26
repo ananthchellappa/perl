@@ -6,6 +6,12 @@
 # function search() { ~/perl/search.pl -D ~/logs $@ ; }
 # to be able to search your logs with $ > search words to search for
 
+# handy aliases
+# csh, tcsh :
+# alias search '/home/username/perl/search.pl -D /home/user/Documents/logs \!*'
+# bash : 
+# function search() { /home/username/perl/search.pl -D  /home/user/Documents/logs "$@" ; }
+
 use strict;
 use warnings;
 use JSON::PP;
